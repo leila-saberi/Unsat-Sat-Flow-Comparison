@@ -1,0 +1,18 @@
+# Default values for parameters not used in sensitivity analysis
+A           80.0           acres    # Pond surface area
+D           100.0           ft      # Max depth of pond
+chi_b       0.5           -         # Pond aspect ratio (W/L)
+theta_p     45.0           deg      # Pond taper angle
+D_g         150.0           ft      # Thickness of alluvium layer
+NXL_u       1.0            -        # Number of pond lengths upstream of pond
+NXL_d       1.0           -         # Number of pond lengths downstream from pond
+NXW         1.0            -        # Number of pond widths north and south of pond
+num_el      400000          -       # Maximum number of elements
+ztop        200.0          ft       # Elevation of pond surface
+up_depth    62.0           ft       # Depth of upstream water table (below minimum ground surface)
+down_depth  86.0           ft       # Depth of downstream water table (below ground surface)
+ss_ash      1.e-4          -        # Specific storativity of ash
+ss_all      1.e-4          -        # Specific storativity of alluvium
+hdry        -1000.0        ft       # Default head output for dry cells
+d_screen    125.0          ft       # Depth well screen drops below ground surface
+nlay        15             -        # Number of layers in model
