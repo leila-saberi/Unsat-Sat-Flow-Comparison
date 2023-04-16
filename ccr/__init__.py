@@ -350,10 +350,10 @@ def mf_model_output(mf, modelname, bas, well_cells, pond_cells, base_dir='.'):
     # Calculate flows (Zone budget)
     cbb_file = os.path.join(base_dir,modelname + ".cbc")
     zon = np.ones(bas.ibound.shape,dtype=int)
-    # upgradien zone
-    # zon[:, :, 1] = 1
+    #upgradien zone
+    zon[:, 38:77, 1] = 4
     # River zone:
-    zon[:,:,-1] = 2
+    zon[:,38:77,-1] = 2
     # Pond zone:
     zon_rows,zon_cols = np.nonzero(bas.ibound[0,:,:])
     # zon[0,np.nonzero(bas.ibound[0,:,:])] = 3
@@ -365,7 +365,7 @@ def mf_model_output(mf, modelname, bas, well_cells, pond_cells, base_dir='.'):
     zb = flopy.utils.ZoneBudget(cbb_file, zon, kstpkper=(0,0))
     df = zb.get_dataframes().reset_index()
     flow_riv = df['ZONE_2'][1]*28.3168  # SS rate into river (L/day)
-    flow_UPG = df['ZONE_1'][0] * 28.3168  # SS rate into river (L/day)
+    flow_UPG = df['ZONE_4'][1] * 28.3168  # SS rate into river (L/day)
     flow_pond = df['ZONE_1'][3]*28.3168 # SS effluent rate from pond (L/day)
     flow_well = 0.5*(df['ZONE_1'][5] + df['ZONE_4'][2])*28.3168 # SS flow through well (L/day)
     print(df.to_string())
