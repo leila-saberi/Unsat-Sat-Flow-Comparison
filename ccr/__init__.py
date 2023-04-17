@@ -351,9 +351,9 @@ def mf_model_output(mf, modelname, bas, well_cells, pond_cells, base_dir='.'):
     cbb_file = os.path.join(base_dir,modelname + ".cbc")
     zon = np.ones(bas.ibound.shape,dtype=int)
     #upgradien zone
-    zon[:, 38:77, 1] = 4
+    zon[:, 27:54, 1] = 4
     # River zone:
-    zon[:,38:77,-1] = 2
+    zon[:,27:54,-1] = 2
     # Pond zone:
     zon_rows,zon_cols = np.nonzero(bas.ibound[0,:,:])
     # zon[0,np.nonzero(bas.ibound[0,:,:])] = 3
