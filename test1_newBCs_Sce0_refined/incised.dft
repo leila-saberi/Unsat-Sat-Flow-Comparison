@@ -7,7 +7,7 @@ D_g         150.0           ft      # Thickness of alluvium layer
 NXL_u       1.0            -        # Number of pond lengths upstream of pond
 NXL_d       1.0           -         # Number of pond lengths downstream from pond
 NXW         1.0            -        # Number of pond widths north and south of pond
-num_el      400000          -       # Maximum number of elements
+num_el      200000          -       # Maximum number of elements
 ztop        200.0          ft       # Elevation of pond surface
 up_depth    62.0           ft       # Depth of upstream water table (below minimum ground surface)
 down_depth  86.0           ft       # Depth of downstream water table (below ground surface)
