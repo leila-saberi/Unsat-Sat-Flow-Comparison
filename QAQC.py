@@ -13,8 +13,11 @@ import matplotlib.ticker as ticker
 from scipy import stats
 import statistics
 
-new_d = 'mf6_sce0_refined'
-org_d = 'test1_newBCs_Sce0'
+new_dir = 'mf6_sce2_refined_UZF'
+org_dir = 'mf6_sce2_refined'
+
+if not os.path.exists(os.path.join(os.getcwd(), new_dir)):
+    shutil.copy(os.path.dir(os.getcwd(), org_dir), os.path.join(os.getcwd(), new_dir))
     
 def compare_heads():
 
@@ -398,13 +401,222 @@ def otherComparisons():
             "Column 200 Cross-Section in grid and heads - NWT model", fontsize=18)
         #cb = plt.colorbar(csa, ax=axes[1],orientation='horizontal')
 
+def add_uzf():
+    # UZF related boundary conditions. For more detail go to:
+                    # https://water.usgs.gov/nrp/gwsoftware/mf2005_fmp/Guide/index.html?uzf_unsaturated_zone_flow_pack.htm
+    nuztop = 3  # An integer value used to define which cell in a vertical column that recharge and discharge is simulated.
+    iuzfopt = 2  # 1= vertical hydraulic conductivity from VKS; 2= VHK from LPF
+    irunflg = 0  # discharged groundwater to surface flag
+    ietflg = 0  # whether evapotranspiration (ET) will be simulated
+    iuzfcb1 = 0  # flag for writing ground-water recharge, ET, and ground-water discharge to land surface using module UBDSV
+    iuzfcb2 = 0  # flag for writing ground-water recharge, ET, and ground-water discharge to land surface using module UBDSV3
+    ntrail2 = 20  # An integer value equal to the number of trailing waves
+    nsets2 = 20  # An integer value equal to the number of wave sets used to simulate multiple infiltration periods
+    nuzgag = 1  # An integer value equal to the number of cells (one per vertical column) that will be specified
+                    # for printing detailed information on the unsaturated zone water budget and water content.
+    # iuzfbnd = np.ones((nrow, ncol), dtype=int) # An array of integer values used to define the aerial extent
+    #                                         # of the active model in which recharge and discharge will be simulated.
+    # iuzfbnd[0, 0] = iuzfbnd[0, ncol - 1] = 0
+    # Fixed properties
+    surfdep = 0.00001  # The average height of undulations in the land surface altitude
+    vks = m.npf.k33.array  # saturated vertical hydraulic conductivity of the unsaturated zone (LT-1)
+    thtr = 0.1  # Residual water content
+    thts = 0.45  # used to define the saturated water content of
+                 # the unsaturated zone in units of volume of water to total volume (L3L-3).
+    thti = 0.105  # used to define the initial water content for each vertical
+                # column of cells in units of volume of water at start of simulation to total volume (L3L-3).
+    eps = 4.0  # Epsilon is used in the relation of water content to hydraulic conductivity (Brooks and Corey, 1966).
+    finf = 0.1  # Infiltration rate ($m/d$)
+    # UZF boundary stresses
+    # finf_mfnwt = np.ones((nrow, ncol), dtype=float) * finf
+    # finf_mfnwt[0, 0] = finf_mfnwt[0, ncol - 1] = 0  # Shut off the outer cells
+    nlay = 15
+    ncol = 163
+    nrow = 81
+    pet = 0.0
+    extdp = 0.0
+    extwc = 0.0
+    ha = 0.0
+    hroot = 0.0
+    rootact = 0.0
+    uzgag = {
+        -68: [-68]  # ,
+        # 65: [
+        #     2,
+        #     5,
+        #     65,
+        #     1,
+        # ],
+        # # Print time, head, uz thickness and cum. vols of infiltration, recharge, storage, change in storage and ground-water discharge to land surface.
+        # 66: [
+        #     5,
+        #     2,
+        #     66,
+        #     2,
+        # ],
+        # # Same as option 1 except rates of infiltration, recharge, change in storage, and ground-water discharge also are printed.
+        # 67: [9, 4, 67, 3],
+    }  # Prints time, ground-water head, thickness of unsaturated zone, followed by a series of depths and water contents in the unsaturated zone.
+
+    fpth2 = os.path.join(new_dir, "incised.hds")
+    hds = flopy.utils.binaryfile.HeadFile(fpth2)
+    h = hds.get_data(kstpkper=(0, 0))
+
+    h_1D = h.ravel()
+    h_df = pd.DataFrame(h_1D, columns=['head'])
+
+    zero_head_index = np.array(np.asarray(np.where(h <= 0.0)).T.tolist())
+    UZF_df = pd.DataFrame(zero_head_index, columns=['lay', 'row', 'col'])
+    UZF_lays = UZF_df['lay'].tolist()
+    UZF_rows = UZF_df['row'].tolist()
+    UZF_cols = UZF_df['col'].tolist()
+
+    #Create a list of all lay, row, columns
+    layers = range(0, nlay)
+    rows = range(0, nrow)
+    cols = range(0, ncol)
+    MyLST = []
+    for l in layers:
+        for r in rows:
+            for c in cols:
+                MyLST.append([l,r,c])
+    # print(MyLST)
+    # print(len(MyLST))
+    DIS_df = pd.DataFrame(MyLST, columns=['lay', 'row', 'col'])
+    # print(DIS_df.shape)
+    DIS_df['nodenumber'] = range(0, len(DIS_df))
+
+    UZF_df = DIS_df[(DIS_df['lay'].isin(UZF_lays)) & (DIS_df['row'].isin(UZF_rows)) & (DIS_df['col'].isin(UZF_cols))]
+
+    pd0 = []
+    packagedata = []
+    for i in range(len(UZF_df)):
+        lay = UZF_df['lay'][i]
+        row = UZF_df['row'][i]
+        col = UZF_df['col'][i]
+        idx = UZF_df[(UZF_df['lay'] == lay+1) & (UZF_df['row'] == row) & (UZF_df['col'] == col)]['nodenumber'].values
+        if len(idx) > 0:
+            ivertcon = idx[0]
+        else:
+            ivertcon = -1
+
+        iuzno = UZF_df['nodenumber'][i]
+
+        print(f'lay {lay}, row {row}, col {col} , node {iuzno}, ivertcon {ivertcon}')
+
+        if lay == 0:
+            lflag = 1
+            surfdep = 0.1
+        else:
+            lflag = 0
+            surfdep = 0.001
+
+        uz = [
+            iuzno,
+            (lay, row, col),
+            lflag,
+            ivertcon,
+            surfdep,
+            vks[lay, row, col],
+            thtr,
+            thts,
+            thti,
+            eps,
+        ]
+        packagedata.append(uz)
+        if lflag:
+            pd0.append((iuzno, finf, pet, extdp, extwc, ha, hroot, rootact))
+    nuzfcells = len(packagedata)
+    uzf_perioddata = {0: pd0}
+    print(packagedata[90415])
+    flopy.mf6.ModflowGwfuzf(
+        m,
+        nuzfcells=nuzfcells,
+        ntrailwaves=15,
+        nwavesets=40,
+        print_flows=True,
+        save_flows=True,
+        packagedata=packagedata,
+        perioddata=uzf_perioddata,
+        pname="UZF-1",
+        budget_filerecord="{}.uzf.bud".format("incised"),
+    )
+
+    print('Created UZF package')
+
+    sim_mf6.write_simulation()
+
+    print('Start running MF6')
+    success, buff = sim_mf6.run_simulation()
+
+    print("\nSuccess is: ", success)
+
+    print('Done with UZF')
+
+def plot_hk():
+    # fname = os.path.join("top")
+    # nwt_m.upw.hk.plot(masked_values=[0.0], colorbar=True, filename_base=fname)
+    # nwt_m.dis.top.plot(contour=True, filename_base=fname)
+    # print(files)
+    # fname = os.path.join("D:/Projects/MikeyRFVersion/test4", "incised.hds")
+    # hdobj = flopy.utils.HeadFile(fname, model=nwt_m)
+    # times = hdobj.get_times()
+    # fname2 = os.path.join("head")
+    # hdobj.plot(totim=times[-1], masked_values=[-9999.0], colorbar=True, filename_base=fname2)
+
+
+    # plot the horizontal hydraulic conductivities
+    # a = nwt_m.upw.vka.array
+    a = m.npf.k.array
+    fig = plt.figure(figsize=(18, 5))
+    ax = fig.add_subplot(1, 1, 1)
+    xsect = flopy.plot.PlotCrossSection(model=m, line={"row": 41})
+    csa = xsect.plot_array(a)
+    patches = xsect.plot_ibound()
+    linecollection = xsect.plot_grid()
+    t = ax.set_title(
+        "Row 41 Cross-Section with Horizontal hydraulic conductivity"
+    )
+    cb = plt.colorbar(csa, shrink=0.75)
+
+
+    # heads
+    # fname = os.path.join("D:/Projects/MikeyRFVersion/test4", "incised.hds")
+    fname2 = os.path.join("D:/Projects/Reversibility/Unsat-Sat-Flow-Comparison/mf6_sce2_refined", "incised.hds")
+    hdobj = flopy.utils.HeadFile(fname2)
+    head = hdobj.get_data()
+
+    fig = plt.figure(figsize=(18, 5))
+
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_title("Row 41 Cross-Section with Heads")
+    xsect = flopy.plot.PlotCrossSection(model=m, line={"row": 41})
+    pc = xsect.plot_array(head, head=head, alpha=0.5)
+    patches = xsect.plot_ibound(head=head)
+    linecollection = xsect.plot_grid()
+    cb = plt.colorbar(pc, shrink=0.75)
+
+    plt.show()
+
+
+def uzf_budget():
+    fpth = os.path.join(new_dir, "incised.uzf.bud")
+    avail = os.path.isfile(fpth)
+    if avail:
+        uzfbdobjct = flopy.utils.CellBudgetFile(fpth, verbose=True)
+        uzfbdobjct.list_records()
+    else:
+        print('"{}" is not available'.format(fpth))
+
+    a = uzfbdobjct.get_data(kstpkper=(0,0), text="FLOW-JA-FACE")
+    print(a)
+
 if __name__ == '__main__':
-    sim_mf6 = flopy.mf6.MFSimulation.load(sim_ws=new_d)
+    sim_mf6 = flopy.mf6.MFSimulation.load(sim_ws=new_dir)
     m = sim_mf6.get_model()
 
-    nwt_m = flopy.modflow.Modflow.load("incised.nam", model_ws=org_d,
-                                       verbose=False,
-                                       check=False,
-                                       exe_name="mfnwt.exe", )
-    compare_heads()
+    # compare_heads()
     # compare_saturation()
+    # add_uzf()
+    # plot_hk()
+    uzf_budget()
