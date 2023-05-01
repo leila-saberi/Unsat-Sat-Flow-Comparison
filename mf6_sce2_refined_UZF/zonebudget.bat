@@ -1,0 +1,1 @@
+zbud6.exe zonebud.zbnam
