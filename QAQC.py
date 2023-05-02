@@ -420,13 +420,14 @@ def add_uzf():
     # Fixed properties
     surfdep = 0.00001  # The average height of undulations in the land surface altitude
     vks = m.npf.k33.array  # saturated vertical hydraulic conductivity of the unsaturated zone (LT-1)
+    npf = m.npf.k.array
     thtr = 0.1  # Residual water content
     thts = 0.45  # used to define the saturated water content of
                  # the unsaturated zone in units of volume of water to total volume (L3L-3).
     thti = 0.105  # used to define the initial water content for each vertical
                 # column of cells in units of volume of water at start of simulation to total volume (L3L-3).
-    eps = 4.0  # Epsilon is used in the relation of water content to hydraulic conductivity (Brooks and Corey, 1966).
-    finf = 0.1  # Infiltration rate ($m/d$)
+    eps = 8.0  # Epsilon is used in the relation of water content to hydraulic conductivity (Brooks and Corey, 1966).
+    finf = 0.2  # Infiltration rate ($m/d$)
     # UZF boundary stresses
     # finf_mfnwt = np.ones((nrow, ncol), dtype=float) * finf
     # finf_mfnwt[0, 0] = finf_mfnwt[0, ncol - 1] = 0  # Shut off the outer cells
@@ -502,7 +503,7 @@ def add_uzf():
 
         iuzno = UZF_df['nodenumber'][i]
 
-        print(f'lay {lay}, row {row}, col {col} , node {iuzno}, ivertcon {ivertcon}')
+        # print(f'lay {lay}, row {row}, col {col} , node {iuzno}, ivertcon {ivertcon}')
 
         if lay == 0:
             lflag = 1
@@ -528,30 +529,40 @@ def add_uzf():
             pd0.append((iuzno, finf, pet, extdp, extwc, ha, hroot, rootact))
     nuzfcells = len(packagedata)
     uzf_perioddata = {0: pd0}
-    print(packagedata[90415])
-    flopy.mf6.ModflowGwfuzf(
-        m,
-        nuzfcells=nuzfcells,
-        ntrailwaves=15,
-        nwavesets=40,
-        print_flows=True,
-        save_flows=True,
-        packagedata=packagedata,
-        perioddata=uzf_perioddata,
-        pname="UZF-1",
-        budget_filerecord="{}.uzf.bud".format("incised"),
-    )
+    # print(nuzfcells)
+    UZF_PondCells = np.array(np.asarray(np.where((npf < 0.3))).T.tolist())
+    UZF_PondCells_df = pd.DataFrame(UZF_PondCells, columns=['lay', 'row', 'col'])
+    UZF_PondCells_df = UZF_PondCells_df.loc[UZF_PondCells_df['lay'] < 8]  # pond cells in UZF
+    UZF_PondCells_df['nodenumber'] = UZF_PondCells_df['lay'] * (81*163) + UZF_PondCells_df["row"] * 163 + UZF_PondCells_df["col"]
+    # UZF_up = UZF_df.loc[(UZF_df['lay'] < 8) & (UZF_df['col'] == 1)]
+    # UZF_Riv = UZF_df.loc[(UZF_df['lay'] < 8) & (UZF_df['col'] == (ncol-1))]
 
-    print('Created UZF package')
+    print(UZF_PondCells_df.head)
 
-    sim_mf6.write_simulation()
 
-    print('Start running MF6')
-    success, buff = sim_mf6.run_simulation()
-
-    print("\nSuccess is: ", success)
-
-    print('Done with UZF')
+    # flopy.mf6.ModflowGwfuzf(
+    #     m,
+    #     nuzfcells=nuzfcells,
+    #     ntrailwaves=15,
+    #     nwavesets=40,
+    #     print_flows=True,
+    #     save_flows=True,
+    #     packagedata=packagedata,
+    #     perioddata=uzf_perioddata,
+    #     pname="UZF-1",
+    #     budget_filerecord="{}.uzf.bud".format("incised"),
+    # )
+    #
+    # print('Created UZF package')
+    #
+    # sim_mf6.write_simulation()
+    #
+    # print('Start running MF6')
+    # success, buff = sim_mf6.run_simulation()
+    #
+    # print("\nSuccess is: ", success)
+    #
+    # print('Done with UZF')
 
 def plot_hk():
     # fname = os.path.join("top")
@@ -610,6 +621,12 @@ def uzf_budget():
 
     a = uzfbdobjct.get_data(kstpkper=(0,0), text="FLOW-JA-FACE")
     print(a)
+    # print(len(a))
+    # UZF_PondCells = np.array(np.asarray(np.where((npf < 0.3))).T.tolist())
+    # UZF_PondCells_df = pd.DataFrame(UZF_PondCells, columns=['lay', 'row', 'col'])
+    # UZF_PondCells_df = UZF_PondCells_df.loc[UZF_PondCells_df['lay'] < 8]  # pond cells in UZF
+    # UZF_PondCells_df['nodenumber'] = UZF_PondCells_df['lay'] * (81*163) + UZF_PondCells_df["row"] * 163 + UZF_PondCells_df["col"]
+
 
 if __name__ == '__main__':
     sim_mf6 = flopy.mf6.MFSimulation.load(sim_ws=new_dir)
@@ -617,6 +634,6 @@ if __name__ == '__main__':
 
     # compare_heads()
     # compare_saturation()
-    # add_uzf()
+    add_uzf()
     # plot_hk()
-    uzf_budget()
+    # uzf_budget()
