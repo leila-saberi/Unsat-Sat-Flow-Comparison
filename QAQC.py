@@ -422,10 +422,10 @@ def add_uzf():
     surfdep = 0.00001  # The average height of undulations in the land surface altitude
     vks = m.npf.k33.array  # saturated vertical hydraulic conductivity of the unsaturated zone (LT-1)
     npf = m.npf.k.array
-    thtr = 0.1  # Residual water content
+    thtr = 0.05  # Residual water content
     thts = 0.35  # used to define the saturated water content of
                  # the unsaturated zone in units of volume of water to total volume (L3L-3).
-    thti = 0.105  # used to define the initial water content for each vertical
+    thti = 0.05  # used to define the initial water content for each vertical
                 # column of cells in units of volume of water at start of simulation to total volume (L3L-3).
     eps = 3.5  # Epsilon is used in the relation of water content to hydraulic conductivity (Brooks and Corey, 1966).
     finf = 0.2  # Infiltration rate ($m/d$)
@@ -528,6 +528,8 @@ def add_uzf():
         packagedata.append(uz)
         if lflag:
             pd0.append((iuzno, finf, pet, extdp, extwc, ha, hroot, rootact))
+        else:
+            pd0.append((iuzno, 0.0, pet, extdp, extwc, ha, hroot, rootact))
     nuzfcells = len(packagedata)
     uzf_perioddata = {0: pd0}
     # print(nuzfcells)
@@ -544,7 +546,7 @@ def add_uzf():
     flopy.mf6.ModflowGwfuzf(
         m,
         nuzfcells=nuzfcells,
-        ntrailwaves=15,
+        ntrailwaves=10,
         nwavesets=40,
         print_flows=True,
         save_flows=True,
@@ -552,6 +554,7 @@ def add_uzf():
         perioddata=uzf_perioddata,
         pname="UZF-1",
         budget_filerecord="{}.uzf.bud".format("incised"),
+        budgetcsv_filerecord="{}.uzf.csv".format("incised")
     )
 
     print('Created UZF package')
@@ -652,7 +655,7 @@ def MF6_Satbudget():
     UZF_PondCells_df = pd.DataFrame(UZF_PondCells, columns=['lay', 'row', 'col'])
     UZF_PondCells_df['nodenumber'] = UZF_PondCells_df['lay'] * (81 * 163) + UZF_PondCells_df["row"] * 163 + \
                                      UZF_PondCells_df["col"]
-    UZF_PondCells_bottom = UZF_PondCells_df.loc[UZF_PondCells_df['lay'] == 7]  # pond cells in UZF
+    UZF_PondCells_bottom = UZF_PondCells_df.loc[UZF_PondCells_df['lay'] == 0]  # pond cells in UZF
     BottomPondNodes = UZF_PondCells_bottom['nodenumber'].tolist()
 
     UZF_flow, Inf, GWF, REJ_Inf = uzf_budget()
@@ -666,7 +669,7 @@ def MF6_Satbudget():
     UZF_GWF_df_BottomPond = UZF_GWF_df[UZF_GWF_df['node1'].isin(BottomPondNodes)]
     UZF_FlowJa_df_BottomPond = UZF_flowJa_df[UZF_flowJa_df['node1'].isin(BottomPondNodes)]
 
-    UZF_flow_sum = UZF_flow_df['flow'].sum()
+    UZF_flow_sum = UZF_flowJa_df['flow'].sum()
     UZF_Inf_BottomPond = UZF_Inf_df_BottomPond['Inf'].sum()
 
 
