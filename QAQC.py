@@ -12,6 +12,7 @@ from matplotlib.ticker import ScalarFormatter
 import matplotlib.ticker as ticker
 from scipy import stats
 import statistics
+import subprocess
 
 new_dir = 'mf6_sce2_refined_UZF'
 org_dir = 'mf6_sce2_refined'
@@ -406,11 +407,11 @@ def add_uzf():
                     # https://water.usgs.gov/nrp/gwsoftware/mf2005_fmp/Guide/index.html?uzf_unsaturated_zone_flow_pack.htm
     nuztop = 3  # An integer value used to define which cell in a vertical column that recharge and discharge is simulated.
     iuzfopt = 2  # 1= vertical hydraulic conductivity from VKS; 2= VHK from LPF
-    irunflg = 0  # discharged groundwater to surface flag
+    irunflg = 1  # discharged groundwater to surface flag
     ietflg = 0  # whether evapotranspiration (ET) will be simulated
     iuzfcb1 = 0  # flag for writing ground-water recharge, ET, and ground-water discharge to land surface using module UBDSV
     iuzfcb2 = 0  # flag for writing ground-water recharge, ET, and ground-water discharge to land surface using module UBDSV3
-    ntrail2 = 20  # An integer value equal to the number of trailing waves
+    ntrail2 = 25  # An integer value equal to the number of trailing waves
     nsets2 = 20  # An integer value equal to the number of wave sets used to simulate multiple infiltration periods
     nuzgag = 1  # An integer value equal to the number of cells (one per vertical column) that will be specified
                     # for printing detailed information on the unsaturated zone water budget and water content.
@@ -422,11 +423,11 @@ def add_uzf():
     vks = m.npf.k33.array  # saturated vertical hydraulic conductivity of the unsaturated zone (LT-1)
     npf = m.npf.k.array
     thtr = 0.1  # Residual water content
-    thts = 0.45  # used to define the saturated water content of
+    thts = 0.35  # used to define the saturated water content of
                  # the unsaturated zone in units of volume of water to total volume (L3L-3).
     thti = 0.105  # used to define the initial water content for each vertical
                 # column of cells in units of volume of water at start of simulation to total volume (L3L-3).
-    eps = 8.0  # Epsilon is used in the relation of water content to hydraulic conductivity (Brooks and Corey, 1966).
+    eps = 3.5  # Epsilon is used in the relation of water content to hydraulic conductivity (Brooks and Corey, 1966).
     finf = 0.2  # Infiltration rate ($m/d$)
     # UZF boundary stresses
     # finf_mfnwt = np.ones((nrow, ncol), dtype=float) * finf
@@ -530,39 +531,39 @@ def add_uzf():
     nuzfcells = len(packagedata)
     uzf_perioddata = {0: pd0}
     # print(nuzfcells)
-    UZF_PondCells = np.array(np.asarray(np.where((npf < 0.3))).T.tolist())
-    UZF_PondCells_df = pd.DataFrame(UZF_PondCells, columns=['lay', 'row', 'col'])
-    UZF_PondCells_df = UZF_PondCells_df.loc[UZF_PondCells_df['lay'] < 8]  # pond cells in UZF
-    UZF_PondCells_df['nodenumber'] = UZF_PondCells_df['lay'] * (81*163) + UZF_PondCells_df["row"] * 163 + UZF_PondCells_df["col"]
+    # UZF_PondCells = np.array(np.asarray(np.where((npf < 0.3))).T.tolist())
+    # UZF_PondCells_df = pd.DataFrame(UZF_PondCells, columns=['lay', 'row', 'col'])
+    # UZF_PondCells_df = UZF_PondCells_df.loc[UZF_PondCells_df['lay'] < 8]  # pond cells in UZF
+    # UZF_PondCells_df['nodenumber'] = UZF_PondCells_df['lay'] * (81*163) + UZF_PondCells_df["row"] * 163 + UZF_PondCells_df["col"]
     # UZF_up = UZF_df.loc[(UZF_df['lay'] < 8) & (UZF_df['col'] == 1)]
     # UZF_Riv = UZF_df.loc[(UZF_df['lay'] < 8) & (UZF_df['col'] == (ncol-1))]
 
-    print(UZF_PondCells_df.head)
+    # print(UZF_PondCells_df.head)
 
 
-    # flopy.mf6.ModflowGwfuzf(
-    #     m,
-    #     nuzfcells=nuzfcells,
-    #     ntrailwaves=15,
-    #     nwavesets=40,
-    #     print_flows=True,
-    #     save_flows=True,
-    #     packagedata=packagedata,
-    #     perioddata=uzf_perioddata,
-    #     pname="UZF-1",
-    #     budget_filerecord="{}.uzf.bud".format("incised"),
-    # )
-    #
-    # print('Created UZF package')
-    #
-    # sim_mf6.write_simulation()
-    #
-    # print('Start running MF6')
-    # success, buff = sim_mf6.run_simulation()
-    #
-    # print("\nSuccess is: ", success)
-    #
-    # print('Done with UZF')
+    flopy.mf6.ModflowGwfuzf(
+        m,
+        nuzfcells=nuzfcells,
+        ntrailwaves=15,
+        nwavesets=40,
+        print_flows=True,
+        save_flows=True,
+        packagedata=packagedata,
+        perioddata=uzf_perioddata,
+        pname="UZF-1",
+        budget_filerecord="{}.uzf.bud".format("incised"),
+    )
+
+    print('Created UZF package')
+
+    sim_mf6.write_simulation()
+
+    print('Start running MF6')
+    success, buff = sim_mf6.run_simulation()
+
+    print("\nSuccess is: ", success)
+
+    print('Done with UZF')
 
 def plot_hk():
     # fname = os.path.join("top")
@@ -609,6 +610,100 @@ def plot_hk():
 
     plt.show()
 
+def MF6_Satbudget():
+    base_dir = 'mf6_sce2_refined_UZF'  # 'test1_newBCs_Sce2_refined'#'mf6_sce2_refined'
+
+    modelname = 'incised'
+    exe = 'mf6.exe'
+
+    # To get the zone locs based on the KH
+    temp_dir = 'mf6_sce1_refined'
+    ws = os.path.join(os.getcwd(), temp_dir)
+    sim = flopy.mf6.MFSimulation.load(sim_name=f'{modelname}', version='mf6', exe_name=exe, sim_ws=ws)
+    sim.simulation_data.mfpath.set_sim_path(ws)
+    m = sim.get_model()
+    bas = m.dis.idomain.array
+    bas_shape = bas.shape
+    npf = m.npf.k.array
+
+    # To get the zone budget
+    ws = os.path.join(os.getcwd(), base_dir)
+    sim = flopy.mf6.MFSimulation.load(sim_name=f'{modelname}', version='mf6', exe_name=exe, sim_ws=ws)
+    sim.simulation_data.mfpath.set_sim_path(ws)
+    m = sim.get_model()
+
+    cbb_file = os.path.join(base_dir, modelname + ".cbb")
+    zon = np.ones(bas_shape, dtype=int)
+    # upgradien zone
+    zon[:, 27:54, 1] = 4
+    # River zone:
+    zon[:, 27:54, -1] = 2
+    # Pond zone:
+    zon_rows, zon_cols = np.nonzero(bas[0, :, :])
+    # zon[0,np.nonzero(bas.ibound[0,:,:])] = 3
+    # zon[0,zon_rows,zon_cols] = 3
+    # zon[pond_cells] = 3
+    zon[npf[:, :, :] < 0.3] = 3
+    # Collector well:
+    # zon[-1,well_cells] = 4
+    # zon[-3, well_cells[0], well_cells[1]] = 4
+
+    UZF_PondCells = np.array(np.asarray(np.where((npf < 0.3))).T.tolist())
+    UZF_PondCells_df = pd.DataFrame(UZF_PondCells, columns=['lay', 'row', 'col'])
+    UZF_PondCells_df['nodenumber'] = UZF_PondCells_df['lay'] * (81 * 163) + UZF_PondCells_df["row"] * 163 + \
+                                     UZF_PondCells_df["col"]
+    UZF_PondCells_bottom = UZF_PondCells_df.loc[UZF_PondCells_df['lay'] == 7]  # pond cells in UZF
+    BottomPondNodes = UZF_PondCells_bottom['nodenumber'].tolist()
+
+    UZF_flow, Inf, GWF, REJ_Inf = uzf_budget()
+    UZF_flowJa_df = pd.DataFrame(UZF_flow[0].tolist(), columns=['node1', 'node2', 'flow', 'area'])
+    UZF_Inf_df = pd.DataFrame(Inf[0].tolist(), columns=['node1', 'node2', 'Inf'])
+    UZF_GWF_df = pd.DataFrame(Inf[0].tolist(), columns=['node1', 'node2', 'flow'])
+    UZF_RejInf_df = pd.DataFrame(Inf[0].tolist(), columns=['node1', 'node2', 'Inf'])
+
+    UZF_Inf_df_BottomPond = UZF_Inf_df[UZF_Inf_df['node1'].isin(BottomPondNodes)]
+    UZF_RejInf_df_BottomPond = UZF_RejInf_df[UZF_RejInf_df['node1'].isin(BottomPondNodes)]
+    UZF_GWF_df_BottomPond = UZF_GWF_df[UZF_GWF_df['node1'].isin(BottomPondNodes)]
+    UZF_FlowJa_df_BottomPond = UZF_flowJa_df[UZF_flowJa_df['node1'].isin(BottomPondNodes)]
+
+    UZF_flow_sum = UZF_flow_df['flow'].sum()
+    UZF_Inf_BottomPond = UZF_Inf_df_BottomPond['Inf'].sum()
+
+
+    zonbud = m.output.zonebudget(zon)
+    zonbud.change_model_ws(ws)
+    zonbud.write_input()
+    zbud6_exe = os.path.join(os.getcwd(), base_dir)
+    # zbud_nam = os.path.join(base_dir, 'zonebud.zbnam')
+
+    # args = f'{zbud6_exe}', f'{zbud_nam}'
+
+    # zbud6_exe = r'C:/Users/lsaberi/GitHub/Unsat-Sat-Flow-Comparison/mf6_sce0_refined/zonebudget.bat'
+
+    p = subprocess.Popen(["zonebudget.bat"], shell=True, cwd=zbud6_exe)
+
+    stdout, stderr = p.communicate()
+    print(p.returncode)  # is 0 if success
+
+    if p.returncode == 0:
+        zb = zonbud.get_budget()
+        df = zonbud.get_dataframes().reset_index()
+        flow_DNG = df['ZONE_2'][7] * 28.3168  # SS rate into river (L/day)
+        flow_UPG = df['ZONE_4'][7] * 28.3168  # SS rate into river (L/day)
+        flow_pond = df['ZONE_3'][7] * 28.3168  # SS effluent rate from pond (L/day)
+        flow_DNG_UZF = df['ZONE_2'][2] * 28.3168  # UZF SS rate into river (L/day)
+        flow_UPG_UZF = df['ZONE_4'][2] * 28.3168  # UZF SS rate into river (L/day)
+        flow_pond_UZF = df['ZONE_3'][2] * 28.3168  # UZF SS effluent rate from pond (L/day)
+        # flow_well = 0.5 * (df['ZONE_1'][5] + df['ZONE_4'][2]) * 28.3168  # SS flow through well (L/day)
+        print(df.to_string())
+        print('Flow into river: ' + str(flow_DNG) + ' L/day.')
+        print('Flow from pond: ' + str(flow_pond) + ' L/day.')
+        print('Flow through UPG: ' + str(flow_UPG) + ' L/day.')
+        print('UZF Flow into river: ' + str(flow_DNG_UZF) + ' L/day.')
+        print('UZF Flow from pond: ' + str(flow_pond_UZF) + ' L/day.')
+        print('UZF Flow through UPG: ' + str(flow_UPG_UZF) + ' L/day.')
+        print('Percent: ' + str(flow_pond / flow_DNG * 100.0))
+        exit()
 
 def uzf_budget():
     fpth = os.path.join(new_dir, "incised.uzf.bud")
@@ -619,13 +714,18 @@ def uzf_budget():
     else:
         print('"{}" is not available'.format(fpth))
 
-    a = uzfbdobjct.get_data(kstpkper=(0,0), text="FLOW-JA-FACE")
-    print(a)
+    FlowJa = uzfbdobjct.get_data(kstpkper=(0,0), text="FLOW-JA-FACE")
+    GWF = uzfbdobjct.get_data(kstpkper=(0, 0), text="GWF")
+    Inf = uzfbdobjct.get_data(kstpkper=(0, 0), text="INFILTRATION")
+    REJ_Inf = uzfbdobjct.get_data(kstpkper=(0, 0), text="REJ-INF")
+    # print(a)
     # print(len(a))
     # UZF_PondCells = np.array(np.asarray(np.where((npf < 0.3))).T.tolist())
     # UZF_PondCells_df = pd.DataFrame(UZF_PondCells, columns=['lay', 'row', 'col'])
     # UZF_PondCells_df = UZF_PondCells_df.loc[UZF_PondCells_df['lay'] < 8]  # pond cells in UZF
     # UZF_PondCells_df['nodenumber'] = UZF_PondCells_df['lay'] * (81*163) + UZF_PondCells_df["row"] * 163 + UZF_PondCells_df["col"]
+
+    return FlowJa, Inf, GWF, REJ_Inf
 
 
 if __name__ == '__main__':
@@ -634,6 +734,7 @@ if __name__ == '__main__':
 
     # compare_heads()
     # compare_saturation()
-    add_uzf()
+    # add_uzf()
     # plot_hk()
     # uzf_budget()
+    MF6_Satbudget()
