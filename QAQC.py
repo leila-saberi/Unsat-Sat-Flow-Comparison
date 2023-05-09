@@ -427,8 +427,8 @@ def add_uzf():
                  # the unsaturated zone in units of volume of water to total volume (L3L-3).
     thti = 0.05  # used to define the initial water content for each vertical
                 # column of cells in units of volume of water at start of simulation to total volume (L3L-3).
-    eps = 3.5  # Epsilon is used in the relation of water content to hydraulic conductivity (Brooks and Corey, 1966).
-    finf = 0.2  # Infiltration rate ($m/d$)
+    eps = 4  # Epsilon is used in the relation of water content to hydraulic conductivity (Brooks and Corey, 1966).
+    finf = 0.02  # Infiltration rate ($m/d$)
     # UZF boundary stresses
     # finf_mfnwt = np.ones((nrow, ncol), dtype=float) * finf
     # finf_mfnwt[0, 0] = finf_mfnwt[0, ncol - 1] = 0  # Shut off the outer cells
@@ -492,17 +492,24 @@ def add_uzf():
 
     pd0 = []
     packagedata = []
-    for i in range(len(UZF_df)):
-        lay = UZF_df['lay'][i]
-        row = UZF_df['row'][i]
-        col = UZF_df['col'][i]
-        idx = UZF_df[(UZF_df['lay'] == lay+1) & (UZF_df['row'] == row) & (UZF_df['col'] == col)]['nodenumber'].values
+    # for i in range(len(UZF_df)):
+    #     lay = UZF_df['lay'][i]
+    #     row = UZF_df['row'][i]
+    #     col = UZF_df['col'][i]
+    #     idx = UZF_df[(UZF_df['lay'] == lay+1) & (UZF_df['row'] == row) & (UZF_df['col'] == col)]['nodenumber'].values
+    for i in range(len(DIS_df)):
+        lay = DIS_df['lay'][i]
+        row = DIS_df['row'][i]
+        col = DIS_df['col'][i]
+        idx = DIS_df[(DIS_df['lay'] == lay + 1) & (DIS_df['row'] == row) & (DIS_df['col'] == col)][
+            'nodenumber'].values
         if len(idx) > 0:
             ivertcon = idx[0]
         else:
             ivertcon = -1
 
-        iuzno = UZF_df['nodenumber'][i]
+        # iuzno = UZF_df['nodenumber'][i]
+        iuzno = DIS_df['nodenumber'][i]
 
         # print(f'lay {lay}, row {row}, col {col} , node {iuzno}, ivertcon {ivertcon}')
 
@@ -655,22 +662,22 @@ def MF6_Satbudget():
     UZF_PondCells_df = pd.DataFrame(UZF_PondCells, columns=['lay', 'row', 'col'])
     UZF_PondCells_df['nodenumber'] = UZF_PondCells_df['lay'] * (81 * 163) + UZF_PondCells_df["row"] * 163 + \
                                      UZF_PondCells_df["col"]
-    UZF_PondCells_bottom = UZF_PondCells_df.loc[UZF_PondCells_df['lay'] == 0]  # pond cells in UZF
+    UZF_PondCells_bottom = UZF_PondCells_df.loc[UZF_PondCells_df['lay'] == 7]  # pond cells in UZF
     BottomPondNodes = UZF_PondCells_bottom['nodenumber'].tolist()
 
     UZF_flow, Inf, GWF, REJ_Inf = uzf_budget()
     UZF_flowJa_df = pd.DataFrame(UZF_flow[0].tolist(), columns=['node1', 'node2', 'flow', 'area'])
     UZF_Inf_df = pd.DataFrame(Inf[0].tolist(), columns=['node1', 'node2', 'Inf'])
-    UZF_GWF_df = pd.DataFrame(Inf[0].tolist(), columns=['node1', 'node2', 'flow'])
-    UZF_RejInf_df = pd.DataFrame(Inf[0].tolist(), columns=['node1', 'node2', 'Inf'])
+    UZF_GWF_df = pd.DataFrame(GWF[0].tolist(), columns=['node1', 'node2', 'flow', 'area'])
+    UZF_RejInf_df = pd.DataFrame(REJ_Inf[0].tolist(), columns=['node1', 'node2', 'Inf'])
 
-    UZF_Inf_df_BottomPond = UZF_Inf_df[UZF_Inf_df['node1'].isin(BottomPondNodes)]
-    UZF_RejInf_df_BottomPond = UZF_RejInf_df[UZF_RejInf_df['node1'].isin(BottomPondNodes)]
-    UZF_GWF_df_BottomPond = UZF_GWF_df[UZF_GWF_df['node1'].isin(BottomPondNodes)]
-    UZF_FlowJa_df_BottomPond = UZF_flowJa_df[UZF_flowJa_df['node1'].isin(BottomPondNodes)]
+    # UZF_Inf_df_BottomPond = UZF_Inf_df[UZF_Inf_df['node1'].isin(BottomPondNodes)]
+    # UZF_RejInf_df_BottomPond = UZF_RejInf_df[UZF_RejInf_df['node1'].isin(BottomPondNodes)]
+    # UZF_GWF_df_BottomPond = UZF_GWF_df[UZF_GWF_df['node1'].isin(BottomPondNodes)]
+    # UZF_FlowJa_df_BottomPond = UZF_flowJa_df[UZF_flowJa_df['node1'].isin(BottomPondNodes)]
 
-    UZF_flow_sum = UZF_flowJa_df['flow'].sum()
-    UZF_Inf_BottomPond = UZF_Inf_df_BottomPond['Inf'].sum()
+    # UZF_flow_sum = UZF_flowJa_df['flow'].sum()
+    # UZF_Inf_BottomPond = UZF_Inf_df_BottomPond['Inf'].sum()
 
 
     zonbud = m.output.zonebudget(zon)
